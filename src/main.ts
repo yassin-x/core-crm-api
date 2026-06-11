@@ -10,12 +10,14 @@ import fastifyCsrf from '@fastify/csrf-protection';
 import fastifyStatic from '@fastify/static';
 import fastifyCookie from '@fastify/cookie';
 import compression from '@fastify/compress';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
       trustProxy: true,
+      logger: true,
     }),
     {
       snapshot: true,
@@ -75,6 +77,14 @@ async function bootstrap() {
   });
 
   await app.register(compression);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('My API')
