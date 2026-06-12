@@ -49,6 +49,8 @@ export class ClientController {
     return await this.clientService.update(id, updateClientDto);
   }
 
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return await this.clientService.remove(id);

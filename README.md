@@ -1,98 +1,314 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# CRM Client Management Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A NestJS backend for client and company management, featuring email OTP verification, JWT authentication, role-based access control, and Prisma-managed PostgreSQL persistence.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Overview
 
-## Description
+This project is a modular NestJS application built with Fastify and Prisma. It includes:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- secure user registration and login
+- email OTP verification for account validation
+- JWT access and refresh token flow
+- role-based authorization for protected client operations
+- Prisma models for `User`, `Client`, and `Company`
+- Fastify security middleware, cookies, CSRF, and Swagger documentation
 
-## Project setup
+## Tech Stack
 
-```bash
-$ npm install
+- NestJS
+- Fastify
+- Prisma
+- PostgreSQL
+- JWT
+- Nodemailer
+- CSRF
+- Helmet
+
+## Architecture
+
+The application is structured around NestJS modules:
+
+- `AppModule`
+  - loads global configuration and modules
+  - applies the `ValidationPipe` globally
+- `PrismaModule`
+  - provides a Prisma client with PostgreSQL connection support
+- `MailModule`
+  - sends OTP emails using Nodemailer
+- `AuthModule`
+  - handles registration, login, email verification, refresh tokens, and sign out
+  - exposes `TokenService` for JWT creation and verification
+- `ClientModule`
+  - provides client CRUD operations
+  - protects creation and update routes with admin-level authorization
+
+Bootstrap in `src/main.ts` configures Fastify with:
+
+- `@fastify/helmet`
+- `@fastify/csrf-protection`
+- `@fastify/cookie`
+- `@fastify/static`
+- `@fastify/compress`
+- CORS with credential support
+- Swagger docs available at `/docs`
+
+## Authentication System
+
+Authentication uses an OTP-based validation flow combined with JWT tokens.
+
+### Registration flow
+
+- User registers with email, password, phone, and company name.
+- Passwords are hashed using `bcrypt`.
+- The app generates a 6-digit OTP and stores it with an expiration.
+- The OTP is emailed to the user.
+- A refresh token is set in an HTTP-only cookie.
+- A short-lived access token is returned with `accessState: 'pending'`.
+
+### Login flow
+
+- User logs in with email and password.
+- After password verification, a new OTP is generated and emailed.
+- A new refresh token cookie is issued.
+- A pending access token is returned.
+
+### Email verification
+
+- The user submits `email` and `otpCode`.
+- The server checks OTP validity and expiry.
+- On success, `otpVerified` is set to `true`.
+- The server issues a verified access token with `accessState: 'verified'`.
+
+### Token handling
+
+- `access_token` is signed with `JWT_ACCESS_SECRET` and expires in `15m`
+- `refresh_token` is signed with `JWT_REFRESH_SECRET` and expires in `7d`
+- `refresh_token` is stored in an HTTP-only cookie
+- `AuthGuard` validates access tokens and compares `tokenVersion`
+
+### Sign out
+
+- `DELETE /auth/sign-out` revokes the session by incrementing `tokenVersion`
+- The refresh cookie is cleared
+
+## Security
+
+This backend uses several security mechanisms:
+
+- JWT access and refresh token separation
+- secure HTTP-only cookies for refresh tokens
+- token versioning to invalidate existing access tokens after sign out
+- role-based authorization using `RolesGuard` and the `@Roles()` decorator
+- CSRF protection via Fastify CSRF plugin
+- secure HTTP headers via Helmet
+- global request validation with `ValidationPipe`
+- strict CORS configuration with allowed methods and credentials
+
+> Note: `DELETE /client/:id` in the current code is not protected by authentication. Protect this route before production deployment.
+
+## API Reference
+
+### Auth Endpoints
+
+#### `POST /auth/register`
+
+Registers a new account and sends an OTP email.
+
+Request body:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "Password123",
+  "phone": "0123456789",
+  "companyName": "Acme Corp"
+}
 ```
 
-## Compile and run the project
+Response includes:
 
-```bash
-# development
-$ npm run start
+- `user`
+- `tokens.access_token`
+- HTTP-only `refresh_token` cookie
 
-# watch mode
-$ npm run start:dev
+#### `POST /auth/login`
 
-# production mode
-$ npm run start:prod
+Logs in the user and sends a new OTP.
+
+Request body:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "Password123"
+}
 ```
 
-## Run tests
+Response includes a pending access token and refresh cookie.
 
-```bash
-# unit tests
-$ npm run test
+#### `POST /auth/verify-email`
 
-# e2e tests
-$ npm run test:e2e
+Verifies the OTP and upgrades the session.
 
-# test coverage
-$ npm run test:cov
+Request body:
+
+```json
+{
+  "email": "user@example.com",
+  "otpCode": "123456"
+}
 ```
 
-## Deployment
+#### `PATCH /auth/refresh-token`
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Refreshes the access token using the refresh cookie.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+#### `DELETE /auth/sign-out`
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+Revokes the session and clears the refresh cookie.
+
+### Client Endpoints
+
+#### `GET /client`
+
+Returns all clients. Requires authentication.
+
+#### `GET /client/:id`
+
+Returns a client by ID. Requires authentication.
+
+#### `POST /client`
+
+Creates a client. Requires `ADMIN` role.
+
+Request body:
+
+```json
+{
+  "name": "Client Name",
+  "email": "client@example.com",
+  "phone": "0987654321",
+  "companyName": "Client Company"
+}
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+#### `PATCH /client/:id`
 
-## Resources
+Updates client data. Requires `ADMIN` role.
 
-Check out a few resources that may come in handy when working with NestJS:
+#### `DELETE /client/:id`
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Deletes a client. Requires `ADMIN` role.
 
-## Support
+## Prisma Models
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+`schema.prisma` defines:
 
-## Stay in touch
+### `User`
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- `id: String` (UUID)
+- `email: String` (unique)
+- `password: String`
+- `role: Role` (`USER`, `ADMIN`)
+- `status: UserStatus` (`ACTIVE`, `INACTIVE`, `SUSPENDED`)
+- `phone: String`
+- `otpCode: String?`
+- `otpExpiry: DateTime?`
+- `otpVerified: Boolean`
+- `tokenVersion: Int`
+- `companyId: String?`
+- `createdAt: DateTime`
+- `updatedAt: DateTime`
 
-## License
+Relations:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- optional `company`
+
+### `Client`
+
+- `id: String` (UUID)
+- `name: String`
+- `email: String` (unique)
+- `phone: String`
+- `companyId: String?`
+- `createdAt: DateTime`
+- `updatedAt: DateTime`
+
+Relations:
+
+- optional `company`
+
+### `Company`
+
+- `id: String` (UUID)
+- `name: String`
+- `createdAt: DateTime`
+
+Relations:
+
+- `users`
+- `clients`
+
+### Enums
+
+- `Role`: `USER`, `ADMIN`
+- `UserStatus`: `ACTIVE`, `INACTIVE`, `SUSPENDED`
+
+## Environment Variables
+
+Required env vars:
+
+```bash
+DATABASE_URL
+JWT_SECRET
+JWT_ACCESS_SECRET
+JWT_REFRESH_SECRET
+COOKIE_SECRET
+CORS_ORIGIN
+EMAIL_HOST
+EMAIL_USER
+EMAIL_PASS
+PORT
+NODE_ENV
+```
+
+## Setup & Run
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run in development:
+
+```bash
+npm run start:dev
+```
+
+Build and run in production:
+
+```bash
+npm run build
+npm run start:prod
+```
+
+Run tests:
+
+```bash
+npm run test
+npm run test:e2e
+npm run test:cov
+```
+
+## Swagger API Docs
+
+Open `http://localhost:3000/docs` after startup.
+
+## Production Notes
+
+- Use strong JWT secrets and rotate them regularly.
+- Serve cookies only over HTTPS in production.
+- Add route guarding for all mutating operations.
+- Use a production SMTP provider for email delivery.
+- Enable Prisma migrations before deploying.
