@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { APP_PIPE } from '@nestjs/core';
 import { MailModule } from './modules/mail/mail.module';
+import { ClientModule } from './modules/client/client.module';
 
 @Module({
   imports: [
@@ -11,8 +12,9 @@ import { MailModule } from './modules/mail/mail.module';
       isGlobal: true,
     }),
     PrismaModule,
-    AuthModule,
     MailModule,
+    AuthModule,
+    ClientModule,
   ],
   providers: [
     {

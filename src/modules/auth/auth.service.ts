@@ -51,7 +51,7 @@ export class AuthService {
       },
     });
 
-    const access_token = this.tokenService.generateAccessToken({
+    const access_token = await this.tokenService.generateAccessToken({
       userId: user.id,
       accessState: 'pending',
     });
@@ -95,7 +95,7 @@ export class AuthService {
       return { message: 'Password is incorrect' };
     }
 
-    const access_token = this.tokenService.generateAccessToken({
+    const access_token = await this.tokenService.generateAccessToken({
       userId: user.id,
       accessState: 'pending',
     });
@@ -150,7 +150,7 @@ export class AuthService {
       return { message: 'OTP code has expired' };
     }
 
-    const access_token = this.tokenService.generateAccessToken({
+    const access_token = await this.tokenService.generateAccessToken({
       userId: user.id,
       accessState: 'verified',
     });
@@ -187,6 +187,9 @@ export class AuthService {
       where: { id: payload.userId },
       data: {
         otpVerified: false,
+        tokenVersion: {
+          increment: 1,
+        },
       },
     });
 
@@ -211,7 +214,7 @@ export class AuthService {
     try {
       const payload = await this.tokenService.verifyRefreshToken(refreshToken);
 
-      const access_token = this.tokenService.generateAccessToken({
+      const access_token = await this.tokenService.generateAccessToken({
         userId: payload.userId,
         accessState: 'verified',
       });
