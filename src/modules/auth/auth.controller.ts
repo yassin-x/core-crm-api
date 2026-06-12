@@ -7,12 +7,14 @@ import {
   ParseIntPipe,
   UseGuards,
   Res,
+  Patch,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import type { FastifyReply } from 'fastify';
+import { AuthGuard } from './guards/auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -27,17 +29,27 @@ export class AuthController {
   }
 
   @Post('login')
-  login(@Body() loginAuthDto: LoginAuthDto) {
-    return this.authService.login(loginAuthDto);
+  login(
+    @Res({ passthrough: true }) reply: FastifyReply,
+    @Body() loginAuthDto: LoginAuthDto,
+  ) {
+    return this.authService.login(loginAuthDto, reply);
   }
 
+  @UseGuards(AuthGuard)
   @Post('verify-email')
   verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
     return this.authService.verifyEmail(verifyEmailDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id', new ParseIntPipe()) id: number) {
-    return this.authService.remove(id);
+  @Patch('refresh-token')
+  refreshToken(@Res({ passthrough: true }) reply: FastifyReply) {
+    return this.authService.refreshToken(reply);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete('sign-out')
+  async signOut(@Res({ passthrough: true }) reply: FastifyReply) {
+    return await this.authService.signOut(reply);
   }
 }

@@ -1,13 +1,15 @@
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class RegisterAuthDto {
-  @IsEmail(
-    {},
-    {
-      message: 'The email must be a valid email address',
-    },
-  )
-  email?: string;
+  @IsEmail({}, { message: 'The email must be a valid email address' })
+  @IsNotEmpty({ message: 'The email field is required' })
+  email!: string;
 
   @IsString({
     message: 'The password must be a string',
@@ -18,7 +20,8 @@ export class RegisterAuthDto {
   @MinLength(8, {
     message: 'The password must be at least 8 characters long',
   })
-  password?: string;
+  @IsNotEmpty({ message: 'The password field is required' })
+  password!: string;
 
   @IsString({
     message: 'phone must be a string',
@@ -29,10 +32,12 @@ export class RegisterAuthDto {
   @MinLength(10, {
     message: 'phone must be at least 10 characters long',
   })
-  phone?: string;
+  @IsNotEmpty({ message: 'The phone field is required' })
+  phone!: string;
 
   @IsString({
     message: 'The company name must be a string',
   })
-  companyName?: string;
+  @IsNotEmpty({ message: 'The company name field is required' })
+  companyName!: string;
 }

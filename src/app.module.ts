@@ -3,6 +3,7 @@ import { PrismaModule } from './modules/prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { APP_PIPE } from '@nestjs/core';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { APP_PIPE } from '@nestjs/core';
     }),
     PrismaModule,
     AuthModule,
+    MailModule,
   ],
   providers: [
     {

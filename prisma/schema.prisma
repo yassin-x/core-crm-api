@@ -19,6 +19,10 @@ model User {
   status   UserStatus @default(ACTIVE)
   phone    String
 
+  otpCode     String?
+  otpExpiry   DateTime?
+  otpVerified Boolean   @default(false)
+
   company   Company? @relation(fields: [companyId], references: [id])
   companyId String?
 
