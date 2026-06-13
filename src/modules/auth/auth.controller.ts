@@ -8,12 +8,14 @@ import {
   UseGuards,
   Res,
   Patch,
+  Get,
+  Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
-import type { FastifyReply } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { AuthGuard } from './guards/auth.guard';
 
 @Controller('auth')
@@ -51,5 +53,11 @@ export class AuthController {
   @Delete('sign-out')
   async signOut(@Res({ passthrough: true }) reply: FastifyReply) {
     return await this.authService.signOut(reply);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('me')
+  async meProfile(@Req() req: FastifyRequest) {
+    return await this.authService.meProfile(req);
   }
 }

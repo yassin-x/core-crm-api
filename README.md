@@ -167,6 +167,13 @@ Refreshes the access token using the refresh cookie.
 
 Revokes the session and clears the refresh cookie.
 
+#### `GET /auth/me`
+
+Returns the authenticated user's profile based on JWT token.
+Requires:
+
+- Authorization: Bearer <token>
+
 ### Client Endpoints
 
 #### `GET /client`

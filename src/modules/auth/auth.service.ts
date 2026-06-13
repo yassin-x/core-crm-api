@@ -3,7 +3,7 @@ import { RegisterAuthDto } from './dto/register-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { TokenService } from './stratgies/token.service';
-import { FastifyReply } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -213,6 +213,9 @@ export class AuthService {
 
     try {
       const payload = await this.tokenService.verifyRefreshToken(refreshToken);
+      if (!payload) {
+        throw new UnauthorizedException('unauthorized');
+      }
 
       const access_token = await this.tokenService.generateAccessToken({
         userId: payload.userId,
@@ -238,5 +241,18 @@ export class AuthService {
 
       throw new UnauthorizedException('unauthorized');
     }
+  }
+
+  async meProfile(req: FastifyRequest) {
+    const request = req.user;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: request?.userId },
+    });
+
+    return {
+      message: 'Get user successfully',
+      data: user,
+    };
   }
 }
